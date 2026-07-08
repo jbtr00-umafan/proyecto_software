@@ -394,16 +394,41 @@ def pantalla_pendientes():
 def pantalla_inventario():
     st.title("📦 Inventario")
 
+    # 1. Traemos los productos desde la base de datos
     productos = inventario.obtener_productos()
 
-    for producto in productos:
+    if not productos:
+        st.info("No hay productos registrados en el sistema.")
+        return
 
-        st.write(
-        f"**{producto.nombre}** | "
-        f"Categoría: {producto.categoria} | "
-        f"Stock: {producto.stock} | "
-        f"${producto.precio_unitario:,.0f}"
-                 )
+    # 2. Lista de categorías fija para evitar que Streamlit se quede en negro si el backend no responde
+    lista_filtros = ["Todos", "Lacteos", "Papas", "Bebidas", "Postres", "Combos", "Adiciones", "Salsas", "Entradas"]
+
+    # 3. Creamos el componente visual para filtrar en la parte superior
+    filtro_seleccionado = st.selectbox(
+        "🔍 Filtrar inventario por categoría:",
+        lista_filtros
+    )
+
+    st.divider()
+
+    # 4. Filtramos la lista de productos en tiempo real con Python
+    if filtro_seleccionado != "Todos":
+        productos_mostrar = [p for p in productos if p.categoria == filtro_seleccionado]
+    else:
+        productos_mostrar = productos
+
+    # 5. Desplegamos únicamente los productos que coinciden con el filtro
+    if not productos_mostrar:
+        st.info(f"No hay productos registrados en la categoría '{filtro_seleccionado}'.")
+    else:
+        for producto in productos_mostrar:
+            st.write(
+                f"**{producto.nombre}** | "
+                f"Categoría: {producto.categoria} | "
+                f"Stock: {producto.stock} | "
+                f"${producto.precio_unitario:,.0f}"
+            )
 
     st.divider()
     st.subheader("Reabastecer producto")
@@ -421,7 +446,7 @@ def pantalla_inventario():
         st.write("")
         if st.button("📥 Agregar stock"):
             inventario.actualizar_stock(producto_reabastecer.id_producto, producto_reabastecer.stock + cantidad_reabastecer)
-            st.success(f"Se agregaron {cantidad_reabastecer} unidades de {producto_reabastecer}")
+            st.success(f"Se agregaron {cantidad_reabastecer} unidades de {producto_reabastecer.nombre}")
             st.rerun()
 
 
