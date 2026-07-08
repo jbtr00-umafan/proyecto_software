@@ -3,6 +3,7 @@ import streamlit as st
 from inventario import Inventario
 from pedido import Pedido
 from producto import Producto
+from factura import Factura
 
 if "inventario" not in st.session_state:
     st.session_state.inventario = Inventario()
@@ -12,11 +13,16 @@ if "gestor_pedidos" not in st.session_state:
 
 if "pagina" not in st.session_state:
     st.session_state.pagina = "inicio"
+if "gestor_factura" not in st.session_state:
+    st.session_state.gestor_factura = Factura()
+
+if "pedido_a_facturar" not in st.session_state:
+    st.session_state.pedido_a_facturar = None
 
 
 inventario = st.session_state.inventario
 gestor_pedidos = st.session_state.gestor_pedidos
-
+gestor_factura = st.session_state.gestor_factura
 
 def ir_a(pagina: str):
     st.session_state.pagina = pagina
@@ -357,8 +363,6 @@ def pantalla_pendientes():
 
     for p in pendientes:
         with st.container(border=True):
-            # Cambiamos las proporciones de las columnas ([4, 1, 1] a [4, 2, 1]) 
-            # para darle buen espacio al selector de pago en la columna 2
             c1, c2, c3 = st.columns([4, 2, 1])
             
             with c1:
@@ -368,22 +372,21 @@ def pantalla_pendientes():
                 st.write(f"💰 Total: ${p['total']:,.0f}  |  🕐 {p['fecha']}")
                 
             with c2:
-                # 1. El usuario elige cómo va a pagar el cliente antes de procesar
                 metodo_seleccionado = st.selectbox(
                     "Forma de pago", 
                     ["Físico (Efectivo)", "Transacción"], 
-                    key=f"pago_{p['id']}"  # Usamos p['id'] porque tu variable del ciclo es 'p'
+                    key=f"pago_{p['id']}"  
                 )
                 
-                # 2. Al presionar el botón, se envía el ID del pedido Y el método seleccionado
                 if st.button("✔️ Completar y Pagar", key=f"completar_{p['id']}", use_container_width=True):
                     gestor_pedidos.completar_pedido(p["id"], metodo_seleccionado)
-                    st.success(f"¡Pedido #{p['id']} pagado con éxito!")
+                    
+                    p["metodo_pago"] = metodo_seleccionado
+                    
+                    st.session_state.pedido_a_facturar = p
                     st.rerun()
                     
             with c3:
-                # Dejamos un espacio vacío arriba para que el botón de cancelar 
-                # se alinee visualmente con el botón de completar de la columna de al lado
                 st.write("")
                 st.write("")
                 if st.button("❌ Cancelar", key=f"cancelar_{p['id']}", use_container_width=True):
@@ -457,6 +460,51 @@ def pantalla_ingresos():
         "Solo se muestran los movimientos del día actual según el reloj del sistema."
     )
 
+@st.dialog("Validación de Factura - El Refugio", width="large")
+def mostrar_interfaz_facturacion():
+    pedido = st.session_state.pedido_a_facturar
+    
+    st.write(f"### Comprobar Datos de Facturación")
+    st.write(f"**Pedido ID:** #{pedido['id']} | **Cliente:** {pedido['nombre']}")
+    st.write(f"**Método de Pago Seleccionado:** {pedido['metodo_pago']}")
+    st.divider()
+
+    st.write("**Desglose de Ítems:**")
+    for prod in pedido["productos"]:
+        st.write(f"- {prod.nombre} × {prod.cantidad} (${prod.precio_unitario:,.0f} c/u) → **Subtotal: ${prod.subtotal:,.0f}**")
+    st.divider()
+    
+
+    subtotal = sum(p.subtotal for p in pedido["productos"])
+    iva_porcentaje = 0.19
+    iva = subtotal * iva_porcentaje
+    total_general = subtotal + iva
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.metric("Subtotal Neto", f"${subtotal:,.0f}")
+        st.metric("IVA (19%)", f"${iva:,.0f}")
+    with col2:
+        st.metric("TOTAL A COBRAR", f"${total_general:,.0f}", delta="Con Impuestos")
+
+    st.info("💡 Asegúrate de recibir el dinero o verificar la transferencia antes de emitir.")
+
+    col_btn1, col_btn2 = st.columns(2)
+    with col_btn1:
+        if st.button("Confirmar y Emitir Factura", type="primary", use_container_width=True):
+            factura_emitida = gestor_factura.generar_factura(
+                pedido_dict=pedido,
+                metodo_pago=pedido["metodo_pago"],
+                impuesto_porcentaje=iva_porcentaje
+            )
+            st.success(f"🎉 ¡Factura {factura_emitida['nro_factura']} guardada con éxito!")
+            st.session_state.pedido_a_facturar = None  # Reseteamos el disparador
+            st.button("Terminar y Actualizar Vista", on_click=st.rerun)
+            
+    with col_btn2:
+        if st.button("Omitir / Cancelar Factura", use_container_width=True):
+            st.session_state.pedido_a_facturar = None
+            st.rerun()
 
 PANTALLAS = {
     "inicio": pantalla_inicio,
@@ -466,5 +514,8 @@ PANTALLAS = {
     "inventario": pantalla_inventario,
     "ingresos": pantalla_ingresos,
 }
+
+if st.session_state.pedido_a_facturar is not None:
+    mostrar_interfaz_facturacion()
 
 PANTALLAS[st.session_state.pagina]()
