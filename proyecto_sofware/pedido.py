@@ -27,9 +27,10 @@ class Pedido:
                 CREATE TABLE IF NOT EXISTS Pedido (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     nombre TEXT NOT NULL,
-                    productos TEXT NOT NULL,   -- lista de Producto serializada como JSON
+                    productos TEXT NOT NULL,
                     total REAL NOT NULL,
                     estado TEXT NOT NULL DEFAULT 'pendiente',
+                    metodo_pago TEXT,          -- <-- Aquí se guardará al completarse
                     fecha TEXT NOT NULL
                 )
             """)
@@ -137,37 +138,57 @@ class Pedido:
             conn.commit()
 
 
-    def completar_pedido(self, id_pedido: int) -> bool:
-        """
-        Marca un pedido como 'completado' y acumula su total en los ingresos
-        (usando la fecha/hora actual del sistema).
-        """
+    def completar_pedido(self, id_pedido: int, metodo_pago: str) -> bool:
+        """Marca un pedido como completado, registra el método de pago y acumula el ingreso."""
+        
+        # 1. Primero buscamos si el pedido existe para saber el total del dinero
         with self._conectar() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT total FROM Pedido WHERE id = ? AND estado = 'pendiente'", (id_pedido,))
+            cursor.execute("SELECT total, estado FROM Pedido WHERE id = ?", (id_pedido,))
             fila = cursor.fetchone()
 
-            if not fila:
-                print(f"⚠️ Pedido #{id_pedido} no existe o ya estaba completado.")
-                return False
+        if not fila:
+            print(f"❌ Pedido #{id_pedido} no encontrado.")
+            return False
 
-            total = fila[0]
-            cursor.execute("UPDATE Pedido SET estado = 'completado' WHERE id = ?", (id_pedido,))
+        total, estado_actual = fila
+
+        if estado_actual != 'pendiente':
+            print(f"⚠️ El pedido #{id_pedido} ya no está pendiente (Estado: {estado_actual}).")
+            return False
+
+        # 2. Si todo está bien, abrimos una nueva conexión para actualizar los datos
+        hoy = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        with self._conectar() as conn:
+            cursor = conn.cursor()
+            
+            # COMANDO SQL UPDATE: Modificamos el estado y el metodo_pago DEL pedido con el id indicado
+            cursor.execute("""
+                UPDATE Pedido
+                SET estado = 'completado',
+                    metodo_pago = ?
+                WHERE id = ?
+            """, (metodo_pago, id_pedido))   # Pasamos las variables en orden para los '?'
+            
+            # También lo registramos en la tabla de Ingresos del día
+            cursor.execute("""
+                INSERT INTO Ingresos (id_pedido, monto, origen, fecha)
+                VALUES (?, ?, 'completado', ?)
+            """, (id_pedido, total, hoy))
+            
+            # ¡CRUCIAL! Confirmamos que se guarden ambos cambios en el archivo físico pedidos.db
             conn.commit()
 
-        self._registrar_ingreso(id_pedido, total, "completado")
-        print(f"✅ Pedido #{id_pedido} marcado como completado. Ingreso acumulado: ${total:,.0f}")
+        print(f"✅ Pedido #{id_pedido} pagado con [{metodo_pago}]. Ingreso acumulado: ${total:,.0f}")
         return True
 
     def eliminar_pedido(self, id_pedido: int, devolver_stock: bool = False) -> bool:
         """
         Borra el pedido de la base de datos, acumulando igualmente su total
-        en los ingresos (para no perder el registro de la venta aunque el
-        pedido ya no exista en la tabla Pedido).
-
-        devolver_stock=True -> úsalo solo si es una CANCELACIÓN real
-        (el producto no llegó a venderse); en ese caso no se cuenta como ingreso.
+        en los ingresos.
         """
+        import json # Aseguramos que json esté disponible
+        
         with self._conectar() as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT productos, total FROM Pedido WHERE id = ?", (id_pedido,))
@@ -180,9 +201,25 @@ class Pedido:
             productos_json, total = fila
 
             if devolver_stock:
-                productos = self._json_a_productos(productos_json)
-                self.inventario.devolver(self._productos_a_dict_cantidades(productos))
-
+                # 1. Convertimos el texto JSON de vuelta a una lista de diccionarios
+                lista_dicts = json.loads(productos_json)
+                
+                # 2. Reconstruimos los objetos Producto mapeando sus datos
+                productos = [
+                    Producto(
+                        id_producto=d["id_producto"],
+                        nombre=d["nombre"],
+                        categoria=d["categoria"],
+                        precio_unitario=d["precio_unitario"],
+                        stock=d["stock"],
+                        cantidad=d["cantidad"]
+                    ) for d in lista_dicts
+                ]
+                
+                # 3. Ahora sí, el ciclo for funcionará sin fallas porque 'productos' ya existe
+                for prod in productos:
+                    self.inventario.devolver(prod.id_producto, prod.cantidad)
+                
             cursor.execute("DELETE FROM Pedido WHERE id = ?", (id_pedido,))
             conn.commit()
 
