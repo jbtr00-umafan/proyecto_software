@@ -462,6 +462,11 @@ def pantalla_ingresos():
 
 @st.dialog("Validación de Factura - El Refugio", width="large")
 def mostrar_interfaz_facturacion():
+    if st.session_state.pedido_a_facturar is None:
+        st.warning("No hay ningún pedido seleccionado para facturar.")
+        return
+        
+
     pedido = st.session_state.pedido_a_facturar
     
     st.write(f"### Comprobar Datos de Facturación")
@@ -476,7 +481,7 @@ def mostrar_interfaz_facturacion():
     
 
     subtotal = sum(p.subtotal for p in pedido["productos"])
-    iva_porcentaje = 0.19
+    iva_porcentaje = 0.0
     iva = subtotal * iva_porcentaje
     total_general = subtotal + iva
 
