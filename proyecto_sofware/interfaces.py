@@ -323,18 +323,36 @@ def pantalla_pendientes():
 
     for p in pendientes:
         with st.container(border=True):
-            c1, c2, c3 = st.columns([4, 1, 1])
+            # Cambiamos las proporciones de las columnas ([4, 1, 1] a [4, 2, 1]) 
+            # para darle buen espacio al selector de pago en la columna 2
+            c1, c2, c3 = st.columns([4, 2, 1])
+            
             with c1:
                 detalle = ", ".join(f"{prod.nombre} x{prod.cantidad}" for prod in p["productos"])
                 st.write(f"**Pedido #{p['id']}** — {p['nombre']}")
                 st.write(f"🧾 {detalle}")
                 st.write(f"💰 Total: ${p['total']:,.0f}  |  🕐 {p['fecha']}")
+                
             with c2:
-                if st.button("✔️ Completar", key=f"completar_{p['id']}"):
-                    gestor_pedidos.completar_pedido(p["id"])
+                # 1. El usuario elige cómo va a pagar el cliente antes de procesar
+                metodo_seleccionado = st.selectbox(
+                    "Forma de pago", 
+                    ["Físico (Efectivo)", "Transacción"], 
+                    key=f"pago_{p['id']}"  # Usamos p['id'] porque tu variable del ciclo es 'p'
+                )
+                
+                # 2. Al presionar el botón, se envía el ID del pedido Y el método seleccionado
+                if st.button("✔️ Completar y Pagar", key=f"completar_{p['id']}", use_container_width=True):
+                    gestor_pedidos.completar_pedido(p["id"], metodo_seleccionado)
+                    st.success(f"¡Pedido #{p['id']} pagado con éxito!")
                     st.rerun()
+                    
             with c3:
-                if st.button("❌ Cancelar", key=f"cancelar_{p['id']}"):
+                # Dejamos un espacio vacío arriba para que el botón de cancelar 
+                # se alinee visualmente con el botón de completar de la columna de al lado
+                st.write("")
+                st.write("")
+                if st.button("❌ Cancelar", key=f"cancelar_{p['id']}", use_container_width=True):
                     gestor_pedidos.eliminar_pedido(p["id"], devolver_stock=True)
                     st.rerun()
 
