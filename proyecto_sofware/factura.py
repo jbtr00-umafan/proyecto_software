@@ -34,21 +34,18 @@ class Factura:
             """)
             conn.commit()
 
-    def generar_factura(self, pedido_dict: dict, metodo_pago: str, impuesto_porcentaje: float = 0.19) -> dict:
+    def generar_factura(self, pedido_dict: dict, metodo_pago: str) -> dict:
         """
-        Calcula los montos financieros y registra la factura en la base de datos.
+        Calcula el monto neto real y registra la factura sin impuestos.
         """
         id_pedido = pedido_dict["id"]
         nombre_cliente = pedido_dict["nombre"]
-        productos = pedido_dict["productos"] 
+        productos = pedido_dict["productos"]
         
-
-        subtotal = sum(p.subtotal for p in productos)
-        impuesto = subtotal * impuesto_porcentaje
-        total_factura = subtotal + impuesto
+        total_real = sum(p.subtotal for p in productos)
+        impuesto = 0.0  
         
         ahora = datetime.now()
- 
         nro_factura = f"FAC-{ahora.strftime('%Y%m%d')}-{id_pedido:04d}"
         fecha_str = ahora.strftime("%Y-%m-%d %H:%M:%S")
         
@@ -63,23 +60,21 @@ class Factura:
                 cursor.execute("""
                     INSERT INTO Factura (id_pedido, nro_factura, nombre_cliente, productos_json, subtotal, impuesto, total, metodo_pago, fecha)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (id_pedido, nro_factura, nombre_cliente, productos_json, subtotal, impuesto, total_factura, metodo_pago, fecha_str))
+                """, (id_pedido, nro_factura, nombre_cliente, productos_json, total_real, impuesto, total_real, metodo_pago, fecha_str))
                 conn.commit()
                 id_factura = cursor.lastrowid
             except sqlite3.IntegrityError:
-                cursor.execute("SELECT id, nro_factura, subtotal, impuesto, total FROM Factura WHERE id_pedido = ?", (id_pedido,))
+                cursor.execute("SELECT id, nro_factura, total FROM Factura WHERE id_pedido = ?", (id_pedido,))
                 fila = cursor.fetchone()
                 return {
                     "id_factura": fila[0], "nro_factura": fila[1], "nombre_cliente": nombre_cliente,
-                    "subtotal": fila[2], "impuesto": fila[3], "total": fila[4], "fecha": fecha_str
+                    "total": fila[2], "fecha": fecha_str
                 }
 
         return {
             "id_factura": id_factura,
             "nro_factura": nro_factura,
             "nombre_cliente": nombre_cliente,
-            "subtotal": subtotal,
-            "impuesto": impuesto,
-            "total": total_factura,
+            "total": total_real,
             "fecha": fecha_str
         }

@@ -463,10 +463,8 @@ def pantalla_ingresos():
 @st.dialog("Validación de Factura - El Refugio", width="large")
 def mostrar_interfaz_facturacion():
     if st.session_state.pedido_a_facturar is None:
-        st.warning("No hay ningún pedido seleccionado para facturar.")
         return
         
-
     pedido = st.session_state.pedido_a_facturar
     
     st.write(f"### Comprobar Datos de Facturación")
@@ -479,27 +477,20 @@ def mostrar_interfaz_facturacion():
         st.write(f"- {prod.nombre} × {prod.cantidad} (${prod.precio_unitario:,.0f} c/u) → **Subtotal: ${prod.subtotal:,.0f}**")
     st.divider()
     
+    total_real = sum(p.subtotal for p in pedido["productos"])
 
-    subtotal = sum(p.subtotal for p in pedido["productos"])
-    iva_porcentaje = 0.0
-    total_general = subtotal 
-
-    col2 = st.columns(2)
-    with col2:
-        st.metric("TOTAL A COBRAR", f"${total_general:,.0f}", delta="precio")
-
-    st.info("💡 Asegúrate de recibir el dinero o verificar la transferencia antes de emitir.")
+    st.metric("TOTAL A COBRAR", f"${total_real:,.0f}")
+    st.divider()
 
     col_btn1, col_btn2 = st.columns(2)
     with col_btn1:
         if st.button("Confirmar y Emitir Factura", type="primary", use_container_width=True):
             factura_emitida = gestor_factura.generar_factura(
                 pedido_dict=pedido,
-                metodo_pago=pedido["metodo_pago"],
-                impuesto_porcentaje=iva_porcentaje
+                metodo_pago=pedido["metodo_pago"]
             )
             st.success(f"🎉 ¡Factura {factura_emitida['nro_factura']} guardada con éxito!")
-            st.session_state.pedido_a_facturar = None  # Reseteamos el disparador
+            st.session_state.pedido_a_facturar = None  
             st.button("Terminar y Actualizar Vista", on_click=st.rerun)
             
     with col_btn2:
