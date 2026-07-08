@@ -3,16 +3,6 @@ import streamlit as st
 from inventario import Inventario
 from pedido import Pedido
 from producto import Producto
-CATEGORIAS = [
-    "Lacteos",
-    "Papas",
-    "Bebidas",
-    "Postres",
-    "Combos",
-    "Adiciones",
-    "Salsas",
-    "Entradas"
-]
 
 if "inventario" not in st.session_state:
     st.session_state.inventario = Inventario()
@@ -223,15 +213,56 @@ def pantalla_nuevo_pedido():
 
 def pantalla_productos():
 
-    st.title("📦 Gestión de Productos")
+    st.title("📦 Gestión de Productos y Categorías")
 
+    # --- SECCIÓN: GESTIÓN DE CATEGORÍAS ---
+    st.subheader("📁 Gestión de Categorías")
+    
+    col_crear, col_lista = st.columns([1, 1])
+    
+    with col_crear:
+        st.markdown("##### Crear nueva categoría")
+        nueva_cat = st.text_input("Nombre de la categoría", key="nueva_cat_input")
+        if st.button("Guardar categoría"):
+            try:
+                inventario.agregar_categoria(nueva_cat)
+                st.success(f"Categoría '{nueva_cat}' agregada.")
+                st.rerun()
+            except ValueError as e:
+                st.error(e)
+                
+    with col_lista:
+        st.markdown("##### Categorías existentes")
+        categorias_actuales = inventario.obtener_categorias()
+        
+        for cat in categorias_actuales:
+            c1, c2 = st.columns([3, 1])
+            with c1:
+                st.write(f"• {cat}")
+            with c2:
+                # Ponemos un candado visual a las categorías por defecto si quieres, 
+                # o permitimos borrar cualquiera con su respectiva validación
+                if st.button("🗑", key=f"del_cat_{cat}"):
+                    try:
+                        inventario.eliminar_categoria(cat)
+                        st.success(f"Categoría '{cat}' eliminada.")
+                        st.rerun()
+                    except ValueError as e:
+                        st.error(e)
+            
+    st.divider()
+
+    # --- SECCIÓN DE PRODUCTOS ---
     st.subheader("Agregar nuevo producto")
 
     nombre = st.text_input("Nombre")
 
+    # Ahora las obtenemos dinámicamente desde la BD
+    categorias_disponibles = inventario.obtener_categorias()
+
     categoria = st.selectbox(
         "Categoría",
-        CATEGORIAS
+        categorias_disponibles
     )
 
     precio = st.number_input(
@@ -251,6 +282,9 @@ def pantalla_productos():
         if not nombre.strip():
 
             st.error("Debe ingresar un nombre.")
+
+        elif not categoria:
+            st.error("Debe seleccionar o crear una categoría primero.")
 
         else:
 
