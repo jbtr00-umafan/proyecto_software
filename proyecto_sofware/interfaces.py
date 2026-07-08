@@ -482,15 +482,11 @@ def mostrar_interfaz_facturacion():
 
     subtotal = sum(p.subtotal for p in pedido["productos"])
     iva_porcentaje = 0.0
-    iva = subtotal * iva_porcentaje
-    total_general = subtotal + iva
+    total_general = subtotal 
 
-    col1, col2 = st.columns(2)
-    with col1:
-        st.metric("Subtotal Neto", f"${subtotal:,.0f}")
-        st.metric("IVA (19%)", f"${iva:,.0f}")
+    col2 = st.columns(2)
     with col2:
-        st.metric("TOTAL A COBRAR", f"${total_general:,.0f}", delta="Con Impuestos")
+        st.metric("TOTAL A COBRAR", f"${total_general:,.0f}", delta="precio")
 
     st.info("💡 Asegúrate de recibir el dinero o verificar la transferencia antes de emitir.")
 
