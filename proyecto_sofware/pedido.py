@@ -39,6 +39,7 @@ class Pedido:
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     id_pedido INTEGER,
                     monto REAL NOT NULL,
+                    metodo_pago TEXT,
                     origen TEXT NOT NULL,   -- 'completado' o 'eliminado'
                     fecha TEXT NOT NULL     -- fecha/hora del movimiento (reloj del sistema)
                 )
