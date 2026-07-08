@@ -40,19 +40,18 @@ class Factura:
         """
         id_pedido = pedido_dict["id"]
         nombre_cliente = pedido_dict["nombre"]
-        productos = pedido_dict["productos"] # Lista de objetos Producto
+        productos = pedido_dict["productos"] 
         
-        # Cálculos económicos
+
         subtotal = sum(p.subtotal for p in productos)
         impuesto = subtotal * impuesto_porcentaje
         total_factura = subtotal + impuesto
         
         ahora = datetime.now()
-        # Genera un consecutivo único basado en la fecha y el ID del pedido
+ 
         nro_factura = f"FAC-{ahora.strftime('%Y%m%d')}-{id_pedido:04d}"
         fecha_str = ahora.strftime("%Y-%m-%d %H:%M:%S")
         
-        # Serializamos los productos a JSON para tener un respaldo de cómo se vendieron en ese instante
         productos_json = json.dumps([
             {"nombre": p.nombre, "cantidad": p.cantidad, "precio_unitario": p.precio_unitario, "subtotal": p.subtotal}
             for p in productos
@@ -68,7 +67,6 @@ class Factura:
                 conn.commit()
                 id_factura = cursor.lastrowid
             except sqlite3.IntegrityError:
-                # Evita duplicados si intentan re-facturar un mismo pedido
                 cursor.execute("SELECT id, nro_factura, subtotal, impuesto, total FROM Factura WHERE id_pedido = ?", (id_pedido,))
                 fila = cursor.fetchone()
                 return {
