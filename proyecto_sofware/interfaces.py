@@ -59,6 +59,11 @@ def pantalla_inicio():
             st.write("Consulta el stock actual y reabastece productos.")
             st.button("Ir a Inventario", key="btn_inventario", on_click=ir_a, args=("inventario",))
 
+        with st.container(border=True):
+            st.markdown("### 🏷️ Productos y Categorias")
+            st.write("Agregar nuevos productos y ctegorias de estos.")
+            st.button("Ir a Productos", key="btn_Productos", on_click=ir_a, args=("Productos",))
+
     with col2:
         with st.container(border=True):
             st.markdown("### ⏳ Pedidos pendientes")
@@ -219,9 +224,8 @@ def pantalla_nuevo_pedido():
 
 def pantalla_productos():
 
-    st.title("📦 Gestión de Productos y Categorías")
+    st.title("🏷️ Gestión de Productos y Categorías")
 
-    # --- SECCIÓN: GESTIÓN DE CATEGORÍAS ---
     st.subheader("📁 Gestión de Categorías")
     
     col_crear, col_lista = st.columns([1, 1])
@@ -246,8 +250,6 @@ def pantalla_productos():
             with c1:
                 st.write(f"• {cat}")
             with c2:
-                # Ponemos un candado visual a las categorías por defecto si quieres, 
-                # o permitimos borrar cualquiera con su respectiva validación
                 if st.button("🗑", key=f"del_cat_{cat}"):
                     try:
                         inventario.eliminar_categoria(cat)
@@ -258,12 +260,10 @@ def pantalla_productos():
             
     st.divider()
 
-    # --- SECCIÓN DE PRODUCTOS ---
     st.subheader("Agregar nuevo producto")
 
     nombre = st.text_input("Nombre")
 
-    # Ahora las obtenemos dinámicamente desde la BD
     categorias_disponibles = inventario.obtener_categorias()
 
     categoria = st.selectbox(
