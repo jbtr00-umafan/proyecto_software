@@ -76,17 +76,26 @@ class Inventario:
         return [fila[0] for fila in filas]
     # --------------------------------------
 
-def agregar_producto(self, nombre, categoria, precio, stock):
-    with self._conectar() as conn:
-        cursor = conn.cursor()
-        try:
+    def agregar_producto(self,
+                         nombre,
+                         categoria,
+                         precio,
+                         stock):
+
+        with self._conectar() as conn:
+
+            cursor = conn.cursor()
+
             cursor.execute("""
-                INSERT INTO Producto (nombre, categoria, precio_unitario, stock)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO Producto
+                (nombre,categoria,precio,stock)
+
+                VALUES(?,?,?,?)
             """, (nombre, categoria, precio, stock))
+
+            
+
             conn.commit()
-        except sqlite3.IntegrityError:
-            raise ValueError(f"El producto '{nombre}' ya se encuentra registrado en el sistema.")
 
     def obtener_productos(self):
 
