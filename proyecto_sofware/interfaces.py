@@ -307,9 +307,11 @@ def pantalla_productos():
 
                 st.rerun()
 
-            except Exception as e:
-
+            except ValueError as e:
                 st.error(e)
+
+            except Exception as e:
+                st.error(f"Error inesperado: {e}")
 
     st.divider()
 
