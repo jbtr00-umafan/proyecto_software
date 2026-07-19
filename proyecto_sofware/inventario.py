@@ -81,7 +81,7 @@ class Inventario:
             cursor = conn.cursor()
             try:
                 cursor.execute("""
-                    INSERT INTO Producto (nombre, categoria, precio_unitario, stock)
+                    INSERT INTO Producto (nombre, categoria, precio, stock)
                     VALUES (?, ?, ?, ?)
                 """, (nombre, categoria, precio, stock))
                 conn.commit()
