@@ -29,9 +29,10 @@ De acuerdo con la interfaz principal de la aplicación, el sistema se organiza e
 
 ---
 
-## Instalación y Ejecución Local
+## Acceso y Prueba en Línea
 
-1. Clona el repositorio e ingresa a la carpeta del proyecto:
-   ```bash
-   git clone [https://github.com/quits666/SistemaPOS-ELRefugio.git](https://github.com/quits666/SistemaPOS-ELRefugio.git)
-   cd SistemaPOS-ELRefugio
+La aplicación se encuentra desplegada en la nube y cuenta con **productos de ejemplo precargados en el inventario**, por lo que no requiere instalación para probar todas sus funcionalidades:
+
+👉 **Abrir aplicación web:** [https://proyectosoftware-cbdukhrsxh9xptztdgzljh.streamlit.app/](https://proyectosoftware-cbdukhrsxh9xptztdgzljh.streamlit.app/)
+
+> **Ejecución local (opcional):** Si deseas correr el proyecto en tu propio entorno, clona este repositorio (`git clone https://github.com/jbtr00-umafan/proyecto_software.git`), instala Streamlit (`pip install streamlit`) y ejecuta el archivo principal con `streamlit run`.
